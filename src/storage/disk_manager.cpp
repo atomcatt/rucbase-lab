@@ -119,7 +119,7 @@ void DiskManager::create_file(const std::string &path) {
     if (is_file(path)) {
         throw FileExistsError(path);
     }
-    int fd = open(path.c_str(), O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
+    int fd = open(path.c_str(), O_CREAT, S_IRUSR | S_IWUSR);
     if (fd == -1) {
         throw UnixError();
     }
@@ -150,7 +150,7 @@ void DiskManager::destroy_file(const std::string &path) {
  */
 int DiskManager::open_file(const std::string &path) {
     // Todo:
-    // 调用open()函数，使用O_RDWR模式
+    // 调用open()函数，使用O_RDWR模式。/
     // 注意不能重复打开相同文件，并且需要更新文件打开列表
     if (path2fd_.count(path)) {
         throw FileNotOpenError(path2fd_[path]);
