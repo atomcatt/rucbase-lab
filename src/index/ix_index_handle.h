@@ -17,6 +17,7 @@ enum class Operation { FIND = 0, INSERT, DELETE };  // 三种操作：查找、�
 
 static const bool binary_search = false;
 
+// 比较两个key的大小 a<b: -1, a > b: 1, a==b: 0
 inline int ix_compare(const char *a, const char *b, ColType type, int col_len) {
     switch (type) {
         case TYPE_INT: {
@@ -36,6 +37,7 @@ inline int ix_compare(const char *a, const char *b, ColType type, int col_len) {
     }
 }
 
+// 比较多列的键值 只要有一个不同就返回
 inline int ix_compare(const char* a, const char* b, const std::vector<ColType>& col_types, const std::vector<int>& col_lens) {
     int offset = 0;
     for(size_t i = 0; i < col_types.size(); ++i) {
