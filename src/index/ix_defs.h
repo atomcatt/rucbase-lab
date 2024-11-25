@@ -49,6 +49,14 @@ public:
                     tot_len_ = 0;
                 } 
 
+    page_id_t get_first_leaf() const { return first_leaf_; }
+
+    page_id_t get_last_leaf() const { return last_leaf_; }
+
+    void set_first_leaf(page_id_t first_leaf) { first_leaf_ = first_leaf; }
+
+    void set_last_leaf(page_id_t last_leaf) { last_leaf_ = last_leaf; }
+
     void update_tot_len() {
         tot_len_ = 0;
         tot_len_ += sizeof(page_id_t) * 4 + sizeof(int) * 6;

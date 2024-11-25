@@ -198,9 +198,21 @@ void SmManager::drop_table(const std::string& tab_name, Context* context) {
  * @param {Context*} context
  */
 void SmManager::create_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context) {
-    
+    TabMeta& tab = db_.get_table(tab_name);
+    IndexMeta index = {.tab_name = tab_name};
+    for (auto& col_name : col_names) {
+        std::vector<ColMeta>::iterator col = tab.get_col(col_name);
+        if (col == tab.cols.end()) {
+            throw ColumnNotFoundError(col_name);
+        }
+        index.cols.push_back(*col);
+        index.col_num += 1;
+        index.col_tot_len += col->len;
+    }
+    ix_manager_->create_index(tab_name, index.cols);
+    tab.indexes.push_back(index);
+    // ihs_.emplace(ix_manager_->get_index_name(tab_name, index.cols), ix_manager_->open_index(tab_name, index.cols));
 }
-
 /**
  * @description: 删除索引
  * @param {string&} tab_name 表名称

@@ -43,7 +43,7 @@ class BPlusTreeTests : public ::testing::Test {
         txn_ = std::make_unique<Transaction>(0);
         rm_ = std::make_unique<RmManager>(disk_manager_.get(), buffer_pool_manager_.get());
         sm_ = std::make_unique<SmManager>(disk_manager_.get(), buffer_pool_manager_.get(), rm_.get(), ix_manager_.get());
-
+        
         // 如果测试目录不存在，则先创建测试目录
         if (disk_manager_->is_dir(TEST_DB_NAME)) {
             std::string cmd = "rm -rf " + TEST_DB_NAME;
@@ -51,25 +51,35 @@ class BPlusTreeTests : public ::testing::Test {
                 throw UnixError();
             }
         }
+        
         sm_->create_db(TEST_DB_NAME);
         assert(disk_manager_->is_dir(TEST_DB_NAME));
+        
         // 进入测试目录
         if (chdir(TEST_DB_NAME.c_str()) < 0) {
             throw UnixError();
         }
+        
         // 如果测试文件存在，则先删除原文件（最后留下来的文件存的是最后一个测试点的数据）
         if (ix_manager_->exists(TEST_FILE_NAME, TEST_COL)) {
             ix_manager_->destroy_index(TEST_FILE_NAME, TEST_COL);
         }
+        
         std::vector<ColDef> coldef;
         coldef.push_back({"col1", TYPE_INT, 4});
         coldef.push_back({"col2", TYPE_INT, 4});
+        
         sm_->create_table(TEST_FILE_NAME, coldef, nullptr);
+        
         sm_->create_index(TEST_FILE_NAME, TEST_COL, nullptr);
+        
         assert(ix_manager_->exists(TEST_FILE_NAME, TEST_COL));
+        
         // 打开测试文件
         ih_ = ix_manager_->open_index(TEST_FILE_NAME, TEST_COL);
+        
         assert(ih_ != nullptr);
+        
     }
 
     // This function is called after every test.

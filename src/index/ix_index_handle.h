@@ -96,11 +96,16 @@ class IxNodeHandle {
 
     bool is_root_page() { return get_parent_page_no() == INVALID_PAGE_ID; }
 
+
     void set_next_leaf(page_id_t page_no) { page_hdr->next_leaf = page_no; }
 
     void set_prev_leaf(page_id_t page_no) { page_hdr->prev_leaf = page_no; }
 
     void set_parent_page_no(page_id_t parent) { page_hdr->parent = parent; }
+
+    void set_next_free_page_no(page_id_t page_no) { page_hdr->next_free_page_no = page_no; }
+
+    void set_is_leaf(bool is_leaf) { page_hdr->is_leaf = is_leaf; }
 
     char *get_key(int key_idx) const { return keys + key_idx * file_hdr->col_tot_len_; }
 
@@ -172,6 +177,9 @@ class IxIndexHandle {
     std::mutex root_latch_;
 
    public:
+
+    void set_root_page_no(page_id_t page_no) { file_hdr_->root_page_ = page_no; }
+
     IxIndexHandle(DiskManager *disk_manager, BufferPoolManager *buffer_pool_manager, int fd);
 
     // for search
