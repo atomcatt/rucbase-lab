@@ -24,6 +24,7 @@ int IxNodeHandle::lower_bound(const char *target) const {
     // 提示: 可以采用多种查找方式，如顺序遍历、二分查找等；使用ix_compare()函数进行比较
     // std::cout<< "In lower_bound" << std::endl;
     int left = 0, right = page_hdr->num_key;
+    // 二分查找
     while (left < right) {
         int mid = left + (right - left) / 2;
         int cmp = ix_compare(get_key(mid), target, file_hdr->col_types_, file_hdr->col_lens_);
@@ -48,6 +49,7 @@ int IxNodeHandle::upper_bound(const char *target) const {
     // 提示: 可以采用多种查找方式：顺序遍历、二分查找等；使用ix_compare()函数进行比较
     // std::cout<< "In upper_bound" << std::endl;
     int left = 0, right = page_hdr->num_key;
+    // 二分查找
     while (left < right) {
         int mid = left + (right - left) / 2;
         int cmp = ix_compare(get_key(mid), target, file_hdr->col_types_, file_hdr->col_lens_);
@@ -562,7 +564,7 @@ bool IxIndexHandle::coalesce(IxNodeHandle **neighbor_node, IxNodeHandle **node, 
     for (int i = 0; i < node_size; i++) {
         maintain_child(*neighbor_node, neighbor_size + i);
     }
-    // 如果node是叶子节点，更新叶子链表
+    // 如果node是叶子节点，删除
     if ((*node)->is_leaf_page()) {
         erase_leaf(*node);
     }

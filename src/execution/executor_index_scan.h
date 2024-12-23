@@ -32,6 +32,7 @@ class IndexScanExecutor : public AbstractExecutor {
     Rid rid_;
     std::unique_ptr<RecScan> scan_;
 
+
     SmManager *sm_manager_;
 
    public:
@@ -63,18 +64,37 @@ class IndexScanExecutor : public AbstractExecutor {
         }
         fed_conds_ = conds_;
     }
-
+    /**
+     * @brief 构建表迭代器scan_,并开始迭代扫描,直到扫描到第一个满足谓词条件的元组停止,并赋值给rid_
+     *
+     */
     void beginTuple() override {
-        
+        std::cout << "In index scan beginTuple()" << std::endl;
     }
 
+    /**
+     * @brief 从当前scan_指向的记录开始迭代扫描,直到扫描到第一个满足谓词条件的元组停止,并赋值给rid_
+     *
+     */
     void nextTuple() override {
-        
+        std::cout << "In index scan nextTuple()" << std::endl;
     }
 
+    /**
+     * @brief 返回下一个满足扫描条件的记录
+     *
+     * @return std::unique_ptr<RmRecord>
+     */
     std::unique_ptr<RmRecord> Next() override {
+        std::cout << "In index scan Next()" << std::endl;
+        // return fh_->get_record(rid_, context_);
         return nullptr;
     }
 
     Rid &rid() override { return rid_; }
+    const std::vector<ColMeta> &cols() const override { return cols_; }
+    // bool is_end() const override { 
+    //     return scan_->is_end();
+    // }
+
 };

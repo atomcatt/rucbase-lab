@@ -75,7 +75,6 @@ int init_tcp_sock(const char *server_host, int server_port) {
 void send_recv_sql(int sockfd, std::string sql) {
     int send_bytes;
     char recv_buf[MAX_MEM_BUFFER_SIZE];
-
     if((send_bytes = write(sockfd, sql.c_str(), sql.length() + 1)) == -1) {
         std::cerr << "send error: " << errno << ":" << strerror(errno) << " \n" << std::endl;
         exit(1);
@@ -144,6 +143,7 @@ int main(int argc, char *argv[]) {
     // 测试点1
     test.open(test_name);
     while(std::getline(test, sql)) {
+        // std::cout << "In query_test: " << sql << std::endl;
         send_recv_sql(sockfd, sql);
     }
 

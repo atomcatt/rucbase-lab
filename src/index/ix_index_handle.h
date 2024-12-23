@@ -41,6 +41,7 @@ inline int ix_compare(const char *a, const char *b, ColType type, int col_len) {
 inline int ix_compare(const char* a, const char* b, const std::vector<ColType>& col_types, const std::vector<int>& col_lens) {
     int offset = 0;
     for(size_t i = 0; i < col_types.size(); ++i) {
+        // 比较每一列（重载的ix_compare函数）
         int res = ix_compare(a + offset, b + offset, col_types[i], col_lens[i]);
         if(res != 0) return res;
         offset += col_lens[i];

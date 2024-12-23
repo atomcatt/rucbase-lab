@@ -45,5 +45,7 @@ class SortExecutor : public AbstractExecutor {
         return nullptr;
     }
 
+    bool is_end() const override { return prev_->is_end(); }
+
     Rid &rid() override { return _abstract_rid; }
 };

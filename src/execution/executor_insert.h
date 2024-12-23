@@ -47,6 +47,8 @@ class InsertExecutor : public AbstractExecutor {
                 throw IncompatibleTypeError(coltype2str(col.type), coltype2str(val.type));
             }
             val.init_raw(col.len);
+            // printf("InsertExecutor: %s\n", val.str_val.c_str());
+            // printf("offset: %d, len: %d\n", col.offset, col.len);
             memcpy(rec.data + col.offset, val.raw->data, col.len);
         }
         // Insert into record file

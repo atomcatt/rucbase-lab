@@ -85,7 +85,26 @@ void SmManager::drop_db(const std::string& db_name) {
  * @param {string&} db_name 数据库名称，与文件夹同名
  */
 void SmManager::open_db(const std::string& db_name) {
-    
+    if (!is_dir(db_name)) {
+        throw DatabaseNotFoundError(db_name);
+    }
+    if (chdir(db_name.c_str()) < 0) {
+        throw UnixError();
+    }
+    std::ifstream ifs(DB_META_NAME);
+    ifs >> db_;
+    ifs.close();
+    // 打开所有的文件
+    for (auto &entry : db_.tabs_) {
+        fhs_.emplace(entry.first, rm_manager_->open_file(entry.first));
+    }
+    // 打开所有的索引
+    for (auto &entry : db_.tabs_) {
+        for (auto &index : entry.second.indexes) {
+            ihs_.emplace(ix_manager_->get_index_name(entry.first, index.cols), ix_manager_->open_index(entry.first, index.cols));
+            drop_index(entry.first, index.cols, nullptr);
+        }
+    }
 }
 
 /**
@@ -101,7 +120,21 @@ void SmManager::flush_meta() {
  * @description: 关闭数据库并把数据落盘
  */
 void SmManager::close_db() {
-    
+    std::ofstream ofs(DB_META_NAME);
+    ofs << db_;
+    db_.name_.clear();
+    db_.tabs_.clear();
+    for(auto &entry : fhs_){
+		rm_manager_->close_file(entry.second.get());
+	}
+	fhs_.clear();
+	for(auto &entry : ihs_){
+		ix_manager_->close_index(entry.second.get());
+	}
+	ihs_.clear();
+	if(chdir("..") < 0){
+		throw UnixError();
+	}
 }
 
 /**
@@ -188,7 +221,15 @@ void SmManager::create_table(const std::string& tab_name, const std::vector<ColD
  * @param {Context*} context
  */
 void SmManager::drop_table(const std::string& tab_name, Context* context) {
-    
+    TabMeta &tab = db_.get_table(tab_name);
+    rm_manager_->close_file(fhs_.at(tab_name).get());
+    rm_manager_->destroy_file(tab_name);
+    for (auto &index : tab.indexes) {
+     	    // drop_index
+            drop_index(tab_name, index.cols, context);
+    }
+    db_.tabs_.erase(tab_name);
+    fhs_.erase(tab_name);
 }
 
 /**
@@ -198,20 +239,27 @@ void SmManager::drop_table(const std::string& tab_name, Context* context) {
  * @param {Context*} context
  */
 void SmManager::create_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context) {
+    // 获取表的Meta data
     TabMeta& tab = db_.get_table(tab_name);
+    // 建索引的Meta data
     IndexMeta index = {.tab_name = tab_name};
+    // 遍历索引包含的字段名称
     for (auto& col_name : col_names) {
+        // 获取字段元数据
         std::vector<ColMeta>::iterator col = tab.get_col(col_name);
         if (col == tab.cols.end()) {
             throw ColumnNotFoundError(col_name);
         }
+        // 将字段元数据添加到索引的元数据中
         index.cols.push_back(*col);
+        // 索引包含的字段数量
         index.col_num += 1;
+        // 索引包含的字段总长度
         index.col_tot_len += col->len;
     }
+    // 创建索引
     ix_manager_->create_index(tab_name, index.cols);
     tab.indexes.push_back(index);
-    // ihs_.emplace(ix_manager_->get_index_name(tab_name, index.cols), ix_manager_->open_index(tab_name, index.cols));
 }
 /**
  * @description: 删除索引
@@ -220,7 +268,19 @@ void SmManager::create_index(const std::string& tab_name, const std::vector<std:
  * @param {Context*} context
  */
 void SmManager::drop_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context) {
-    
+    if (!ix_manager_->exists(tab_name, col_names)) {
+        throw IndexNotFoundError(tab_name, col_names);
+    }
+    std::string index_name = ix_manager_->get_index_name(tab_name, col_names);
+
+    ix_manager_->close_index(ihs_.at(index_name).get());
+    ix_manager_->destroy_index(tab_name, col_names);
+
+    TabMeta& tab = db_.get_table(tab_name);
+    tab.indexes.erase(tab.get_index_meta(col_names));
+
+    ihs_.erase(index_name);
+    flush_meta();
 }
 
 /**
@@ -230,5 +290,9 @@ void SmManager::drop_index(const std::string& tab_name, const std::vector<std::s
  * @param {Context*} context
  */
 void SmManager::drop_index(const std::string& tab_name, const std::vector<ColMeta>& cols, Context* context) {
-    
+    std::vector<std::string> col_names;
+    for (auto& col : cols) {
+        col_names.push_back(col.name);
+    }
+    drop_index(tab_name, col_names, context);
 }

@@ -176,6 +176,7 @@ void *client_handler(void *sock_fd) {
         }
         // future TODO: 格式化 sql_handler.result, 传给客户端
         // send result with fixed format, use protobuf in the future
+        std::cout << "Send to client " << fd << ": \n" << data_send << std::endl;
         if (write(fd, data_send, offset + 1) == -1) {
             break;
         }

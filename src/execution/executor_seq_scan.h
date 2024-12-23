@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "executor_abstract.h"
 #include "index/ix.h"
 #include "system/sm.h"
+#include <fstream>
 
 class SeqScanExecutor : public AbstractExecutor {
    private:
@@ -50,7 +51,94 @@ class SeqScanExecutor : public AbstractExecutor {
      *
      */
     void beginTuple() override {
-        
+        std::cout << "In seq scan beginTuple()" << std::endl;
+        scan_ = std::make_unique<RmScan>(fh_);
+        while (!scan_->is_end()) {
+            rid_ = scan_->rid();
+            auto record = fh_->get_record(rid_, context_);
+            bool flag = false;
+            std::cout << "fed_conds_.size(): " << fed_conds_.size() << std::endl;
+            if (fed_conds_.size() == 0) {
+                flag = true;
+            } else {
+                for (auto &cond : fed_conds_) {
+                    auto lhs_col_meta = get_col(cols_, cond.lhs_col);
+                    char *lhs_data = record->data + lhs_col_meta->offset;
+                    // char *lhs_data = record->data + 4;
+                    char *rhs_data = nullptr;
+                    ColType rhs_type;
+                    if (cond.is_rhs_val) {
+                        rhs_data = cond.rhs_val.raw->data;
+                        rhs_type = cond.rhs_val.type;
+                    } else {
+                        auto rhs_col_meta = get_col(cols_, cond.rhs_col);
+                        rhs_data = record->data + rhs_col_meta->offset;
+                        rhs_type = rhs_col_meta->type;
+                    }
+                    if (lhs_col_meta->type == TYPE_INT) {
+                        printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
+                    } else if (lhs_col_meta->type == TYPE_FLOAT) {
+                        printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);printf("TYPE: lhs_data: %f\n", *(float*)(record->data + lhs_col_meta->offset));
+                    } else if (lhs_col_meta->type == TYPE_STRING) {
+                        printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
+                    }
+                    int cmp = ix_compare(lhs_data, rhs_data, rhs_type, lhs_col_meta->len);
+                    if (cond.op == OP_EQ) {
+                        if (cmp == 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_NE) {
+                        if (cmp != 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_LT) {
+                        if (cmp < 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_GT) {
+                        if (cmp > 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_LE) {
+                        if (cmp <= 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_GE) {
+                        if (cmp >= 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else {
+                        throw InternalError("Unexpected comparison operator");
+                    }
+                }
+            }
+            printf("flag: %d\n", flag);
+            if (flag) {
+                break;
+            }
+            scan_->next();
+        }
+        if (scan_->is_end()) {
+            std::cout << "In SeqScanExecutor::beginTuple(), scan_->is_end()" << std::endl;
+        }
     }
 
     /**
@@ -58,7 +146,93 @@ class SeqScanExecutor : public AbstractExecutor {
      *
      */
     void nextTuple() override {
-        
+        std::cout << "In seq scan nextTuple()" << std::endl;
+        assert(!is_end());
+        scan_->next();
+        while(!scan_->is_end()) {
+            rid_ = scan_->rid();
+            auto record = fh_->get_record(rid_, context_);
+            bool flag = false;
+            std::cout << "fed_conds_.size(): " << fed_conds_.size() << std::endl;
+            if (fed_conds_.size() == 0) {
+                flag = true;
+            } else {
+                for (auto &cond : fed_conds_) {
+                    auto lhs_col_meta = get_col(cols_, cond.lhs_col);
+                    char *lhs_data = record->data + lhs_col_meta->offset;
+                    char *rhs_data = nullptr;
+                    ColType rhs_type;
+                    if (cond.is_rhs_val) {
+                        rhs_data = cond.rhs_val.raw->data;
+                        rhs_type = cond.rhs_val.type;
+                    } else {
+                        auto rhs_col_meta = get_col(cols_, cond.rhs_col);
+                        rhs_data = record->data + rhs_col_meta->offset;
+                        rhs_type = rhs_col_meta->type;
+                    }
+                    if (lhs_col_meta->type == TYPE_INT) {
+                        printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
+                    } else if (lhs_col_meta->type == TYPE_FLOAT) {
+                        printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);printf("TYPE: lhs_data: %f\n", *(float*)(record->data + lhs_col_meta->offset));
+                    } else if (lhs_col_meta->type == TYPE_STRING) {
+                        printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
+                    }
+                    int cmp = ix_compare(lhs_data, rhs_data, rhs_type, lhs_col_meta->len);
+                    if (cond.op == OP_EQ) {
+                        if (cmp == 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_NE) {
+                        if (cmp != 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_LT) {
+                        if (cmp < 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_GT) {
+                        if (cmp > 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_LE) {
+                        if (cmp <= 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else if (cond.op == OP_GE) {
+                        if (cmp >= 0) {
+                            flag = true;
+                        } else {
+                            flag = false;
+                            break;
+                        }
+                    } else {
+                        throw InternalError("Unexpected comparison operator");
+                    }
+                }
+            }
+            if (flag) {
+                break;
+            }
+            scan_->next();
+        }
+        if (scan_->is_end()) {
+            std::cout << "In SeqScanExecutor::nextTuple(), scan_->is_end()" << std::endl;
+        }
     }
 
     /**
@@ -67,8 +241,14 @@ class SeqScanExecutor : public AbstractExecutor {
      * @return std::unique_ptr<RmRecord>
      */
     std::unique_ptr<RmRecord> Next() override {
-        return nullptr;
+        std::cout << "In seq scan Next()" << std::endl;
+        assert(!is_end());
+        return fh_->get_record(rid_, context_);
     }
-
+    size_t tupleLen() const override { return len_; }
     Rid &rid() override { return rid_; }
+    const std::vector<ColMeta> &cols() const override { return cols_; };
+    bool is_end() const override { 
+        return scan_->is_end();
+     }
 };

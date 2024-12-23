@@ -44,16 +44,209 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
     }
 
     void beginTuple() override {
-
+        // 从左边表的第一行开始，遍历右边的每一行
+        left_->beginTuple();
+        // 如果已经到最后一行了，就返回
+        if (left_->is_end()) {
+            return;
+        }
+        right_->beginTuple();
+        while(!left_->is_end()) {
+            std::cout << "fed_conds_.size: " << fed_conds_.size() << std::endl;
+            if (fed_conds_.empty()) {
+                break;
+            }
+            bool flag = false;
+            auto left_record = left_->Next();
+            auto right_record = right_->Next();
+            for (auto &fed_cond : fed_conds_) {
+                auto lhs_col_meta = get_col(cols_, fed_cond.lhs_col);
+                char *lhs_data = left_record->data + lhs_col_meta->offset;
+                char *rhs_data = nullptr;
+                ColType rhs_type;
+                if (fed_cond.is_rhs_val) {
+                    rhs_data = fed_cond.rhs_val.raw->data;
+                    rhs_type = fed_cond.rhs_val.type;
+                } else {
+                    auto rhs_col_meta = get_col(cols_, fed_cond.rhs_col);
+                    rhs_data = right_record->data + rhs_col_meta->offset - left_->tupleLen();
+                    rhs_type = rhs_col_meta->type;
+                }
+                if (lhs_col_meta->type == TYPE_INT) {
+                    printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
+                } else if (lhs_col_meta->type == TYPE_FLOAT) {
+                    printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);
+                } else if (lhs_col_meta->type == TYPE_STRING) {
+                    printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
+                }
+                int cmp = ix_compare(lhs_data, rhs_data, rhs_type, lhs_col_meta->len);
+                if (fed_cond.op == OP_EQ) {
+                    if (cmp == 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_NE) {
+                    if (cmp != 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_LT) {
+                    if (cmp < 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_GT) {
+                    if (cmp > 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_LE) {
+                    if (cmp <= 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_GE) {
+                    if (cmp >= 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else {
+                    throw InternalError("Unexpected comparison operator");
+                }
+            }
+            if (flag) {
+                break;
+            }
+            right_->nextTuple();
+            // 如果右边表已经遍历完了，就从左边表的下一行开始，右边表重新开始遍历
+            if (right_->is_end()) {
+                left_->nextTuple();
+                right_->beginTuple();
+            }
+        }
     }
 
     void nextTuple() override {
-        
+        assert(!is_end());
+        right_->nextTuple();
+        if (right_->is_end()) {
+            left_->nextTuple();
+            right_->beginTuple();
+        }
+        while(!left_->is_end()) {
+            if (fed_conds_.empty()) {
+                break;
+            }
+            bool flag = false;
+            auto left_record = left_->Next();
+            auto right_record = right_->Next();
+            for (auto &fed_cond : fed_conds_) {
+                auto lhs_col_meta = get_col(cols_, fed_cond.lhs_col);
+                char *lhs_data = left_record->data + lhs_col_meta->offset;
+                char *rhs_data = nullptr;
+                ColType rhs_type;
+                if (fed_cond.is_rhs_val) {
+                    rhs_data = fed_cond.rhs_val.raw->data;
+                    rhs_type = fed_cond.rhs_val.type;
+                } else {
+                    auto rhs_col_meta = get_col(cols_, fed_cond.rhs_col);
+                    rhs_data = right_record->data + rhs_col_meta->offset - left_->tupleLen();
+                    rhs_type = rhs_col_meta->type;
+                }
+                if (lhs_col_meta->type == TYPE_INT) {
+                    printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
+                } else if (lhs_col_meta->type == TYPE_FLOAT) {
+                    printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);
+                } else if (lhs_col_meta->type == TYPE_STRING) {
+                    printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
+                }
+                int cmp = ix_compare(lhs_data, rhs_data, rhs_type, lhs_col_meta->len);
+                if (fed_cond.op == OP_EQ) {
+                    if (cmp == 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_NE) {
+                    if (cmp != 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_LT) {
+                    if (cmp < 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_GT) {
+                    if (cmp > 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_LE) {
+                    if (cmp <= 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else if (fed_cond.op == OP_GE) {
+                    if (cmp >= 0) {
+                        flag = true;
+                    } else {
+                        flag = false;
+                        break;
+                    }
+                } else {
+                    throw InternalError("Unexpected comparison operator");
+                }
+            }
+            if (flag) {
+                break;
+            }
+            right_->nextTuple();
+            // 如果右边表已经遍历完了，就从左边表的下一行开始，右边表重新开始遍历
+            if (right_->is_end()) {
+                left_->nextTuple();
+                right_->beginTuple();
+            }
+        }
     }
 
     std::unique_ptr<RmRecord> Next() override {
-        return nullptr;
+        assert(!is_end());
+        auto record = std::make_unique<RmRecord>(len_);
+        auto left_record = left_->Next();
+        auto right_record = right_->Next();
+        memcpy(record->data, left_record->data, left_record->size);
+        memcpy(record->data + left_record->size, right_record->data, right_record->size);
+        return record;
     }
+    
+    bool is_end() const override { return left_->is_end(); }
+
+    size_t tupleLen() const override { return len_; }
+
+    const std::vector<ColMeta> &cols() const override { return cols_; }
 
     Rid &rid() override { return _abstract_rid; }
 };
+

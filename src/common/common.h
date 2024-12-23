@@ -68,6 +68,7 @@ struct Value {
             }
             memset(raw->data, 0, len);
             memcpy(raw->data, str_val.c_str(), str_val.size());
+            // printf("Value: %s\n", raw->data);
         }
     }
 };
