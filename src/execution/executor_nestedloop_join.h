@@ -145,7 +145,6 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
     }
 
     void nextTuple() override {
-        assert(!is_end());
         right_->nextTuple();
         if (right_->is_end()) {
             left_->nextTuple();
@@ -238,7 +237,6 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
     }
 
     std::unique_ptr<RmRecord> Next() override {
-        assert(!is_end());
         auto record = std::make_unique<RmRecord>(len_);
         auto left_record = left_->Next();
         auto right_record = right_->Next();

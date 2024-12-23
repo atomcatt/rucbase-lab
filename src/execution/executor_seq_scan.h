@@ -147,7 +147,6 @@ class SeqScanExecutor : public AbstractExecutor {
      */
     void nextTuple() override {
         std::cout << "In seq scan nextTuple()" << std::endl;
-        assert(!is_end());
         scan_->next();
         while(!scan_->is_end()) {
             rid_ = scan_->rid();
@@ -242,7 +241,6 @@ class SeqScanExecutor : public AbstractExecutor {
      */
     std::unique_ptr<RmRecord> Next() override {
         std::cout << "In seq scan Next()" << std::endl;
-        assert(!is_end());
         return fh_->get_record(rid_, context_);
     }
     size_t tupleLen() const override { return len_; }

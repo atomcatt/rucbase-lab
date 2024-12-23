@@ -45,12 +45,10 @@ class ProjectionExecutor : public AbstractExecutor {
     }
 
     void nextTuple() override {
-        assert(!is_end());
         prev_->nextTuple();
     }
 
     std::unique_ptr<RmRecord> Next() override {
-        assert(!is_end());
         auto &prev_cols = prev_->cols();
         auto prev_record = prev_->Next();
         auto project_record = std::make_unique<RmRecord>(len_);
