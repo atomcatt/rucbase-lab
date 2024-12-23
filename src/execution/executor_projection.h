@@ -52,14 +52,12 @@ class ProjectionExecutor : public AbstractExecutor {
     std::unique_ptr<RmRecord> Next() override {
         assert(!is_end());
         auto &prev_cols = prev_->cols();
-        auto prev_rec = prev_->Next();
-        auto &project_cols = cols_;
+        auto prev_record = prev_->Next();
         auto project_record = std::make_unique<RmRecord>(len_);
-        for (size_t project_idx = 0; project_idx < project_cols.size(); project_idx++) {
-            auto &project_col = project_cols[project_idx];
-            size_t prev_idx = sel_idxs_[project_idx];
-            auto &prev_col = prev_cols[prev_idx];
-            memcpy(project_record->data + project_col.offset, prev_rec->data + prev_col.offset, prev_col.len);
+        for (size_t project_idx = 0; project_idx < cols_.size(); project_idx++) {
+            auto &project_col = cols_.at(project_idx);
+            auto &prev_col = prev_cols.at(sel_idxs_.at(project_idx));
+            memcpy(project_record->data + project_col.offset, prev_record->data + prev_col.offset, prev_col.len);
         }
         return project_record;
     }

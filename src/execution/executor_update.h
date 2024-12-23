@@ -45,6 +45,7 @@ class UpdateExecutor : public AbstractExecutor {
         */
         for (auto &rid : rids_) {
             auto record = fh_->get_record(rid, context_);
+            // 更新记录
             for (auto& set_clause : set_clauses_) {
                 auto lhs_col = tab_.get_col(set_clause.lhs.col_name);
                 memcpy(record->data + lhs_col->offset, set_clause.rhs.raw->data, lhs_col->len);

@@ -69,6 +69,12 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
                     rhs_type = fed_cond.rhs_val.type;
                 } else {
                     auto rhs_col_meta = get_col(cols_, fed_cond.rhs_col);
+                    /*
+                        注意：这里的offset是相对于整个record的，而不是相对于右边表的
+                        for (auto &col : right_cols) {
+                            col.offset += left_->tupleLen();
+                        }
+                    */
                     rhs_data = right_record->data + rhs_col_meta->offset - left_->tupleLen();
                     rhs_type = rhs_col_meta->type;
                 }
@@ -236,8 +242,8 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
         auto record = std::make_unique<RmRecord>(len_);
         auto left_record = left_->Next();
         auto right_record = right_->Next();
-        memcpy(record->data, left_record->data, left_record->size);
-        memcpy(record->data + left_record->size, right_record->data, right_record->size);
+        memcpy(record->data, left_record->data, left_->tupleLen());
+        memcpy(record->data + left_->tupleLen(), right_record->data, right_->tupleLen());
         return record;
     }
     
