@@ -36,6 +36,9 @@ class UpdateExecutor : public AbstractExecutor {
         conds_ = conds;
         rids_ = rids;
         context_ = context;
+        if (context) {
+            context_->lock_mgr_->lock_IX_on_table(context->txn_, fh_->GetFd());
+        }
     }
     std::unique_ptr<RmRecord> Next() override {
         /*
@@ -45,12 +48,13 @@ class UpdateExecutor : public AbstractExecutor {
         */
         for (auto &rid : rids_) {
             auto record = fh_->get_record(rid, context_);
+            auto write_record = new WriteRecord(WType::UPDATE_TUPLE, tab_name_, rid, *record);
+            context_->txn_->append_write_record(write_record);
             // 更新记录
             for (auto& set_clause : set_clauses_) {
                 auto lhs_col = tab_.get_col(set_clause.lhs.col_name);
                 memcpy(record->data + lhs_col->offset, set_clause.rhs.raw->data, lhs_col->len);
             }
-            fh_->update_record(rid, record->data, context_);
             // 更新索引
             for (size_t i = 0; i < tab_.indexes.size(); ++i) {
                 auto &index = tab_.indexes[i];
@@ -66,8 +70,9 @@ class UpdateExecutor : public AbstractExecutor {
                 // 删除旧的索引
                 ih->delete_entry(key, context_->txn_);
                 // 插入新的索引
-                ih->insert_entry(key, rid, context_->txn_);
+                // ih->insert_entry(key, rid, context_->txn_);
             }
+            fh_->update_record(rid, record->data, context_);
         }
         return nullptr;
     }

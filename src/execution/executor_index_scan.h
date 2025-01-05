@@ -69,7 +69,7 @@ class IndexScanExecutor : public AbstractExecutor {
      *
      */
     void beginTuple() override {
-        std::cout << "In index scan beginTuple()" << std::endl;
+
     }
 
     /**
@@ -77,7 +77,7 @@ class IndexScanExecutor : public AbstractExecutor {
      *
      */
     void nextTuple() override {
-        std::cout << "In index scan nextTuple()" << std::endl;
+
     }
 
     /**
@@ -86,8 +86,6 @@ class IndexScanExecutor : public AbstractExecutor {
      * @return std::unique_ptr<RmRecord>
      */
     std::unique_ptr<RmRecord> Next() override {
-        std::cout << "In index scan Next()" << std::endl;
-        // return fh_->get_record(rid_, context_);
         return nullptr;
     }
 

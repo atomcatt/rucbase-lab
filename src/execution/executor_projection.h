@@ -40,7 +40,6 @@ class ProjectionExecutor : public AbstractExecutor {
     }
     
     void beginTuple() override {
-        std::cout << "In projection beginTuple()" << std::endl;
         prev_->beginTuple();
     }
 

@@ -44,6 +44,9 @@ class SeqScanExecutor : public AbstractExecutor {
         context_ = context;
 
         fed_conds_ = conds_;
+        if (context) {
+            context_->lock_mgr_->lock_shared_on_table(context->txn_, fh_->GetFd());
+        }
     }
 
     /**
@@ -51,13 +54,11 @@ class SeqScanExecutor : public AbstractExecutor {
      *
      */
     void beginTuple() override {
-        std::cout << "In seq scan beginTuple()" << std::endl;
         scan_ = std::make_unique<RmScan>(fh_);
         while (!scan_->is_end()) {
             rid_ = scan_->rid();
             auto record = fh_->get_record(rid_, context_);
             bool flag = false;
-            std::cout << "fed_conds_.size(): " << fed_conds_.size() << std::endl;
             if (fed_conds_.size() == 0) {
                 flag = true;
             } else {
@@ -75,13 +76,13 @@ class SeqScanExecutor : public AbstractExecutor {
                         rhs_data = record->data + rhs_col_meta->offset;
                         rhs_type = rhs_col_meta->type;
                     }
-                    if (lhs_col_meta->type == TYPE_INT) {
-                        printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
-                    } else if (lhs_col_meta->type == TYPE_FLOAT) {
-                        printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);printf("TYPE: lhs_data: %f\n", *(float*)(record->data + lhs_col_meta->offset));
-                    } else if (lhs_col_meta->type == TYPE_STRING) {
-                        printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
-                    }
+                    // if (lhs_col_meta->type == TYPE_INT) {
+                    //     printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
+                    // } else if (lhs_col_meta->type == TYPE_FLOAT) {
+                    //     printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);printf("TYPE: lhs_data: %f\n", *(float*)(record->data + lhs_col_meta->offset));
+                    // } else if (lhs_col_meta->type == TYPE_STRING) {
+                    //     printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
+                    // }
                     int cmp = ix_compare(lhs_data, rhs_data, rhs_type, lhs_col_meta->len);
                     if (cond.op == OP_EQ) {
                         if (cmp == 0) {
@@ -130,14 +131,10 @@ class SeqScanExecutor : public AbstractExecutor {
                     }
                 }
             }
-            printf("flag: %d\n", flag);
             if (flag) {
                 break;
             }
             scan_->next();
-        }
-        if (scan_->is_end()) {
-            std::cout << "In SeqScanExecutor::beginTuple(), scan_->is_end()" << std::endl;
         }
     }
 
@@ -146,13 +143,11 @@ class SeqScanExecutor : public AbstractExecutor {
      *
      */
     void nextTuple() override {
-        std::cout << "In seq scan nextTuple()" << std::endl;
         scan_->next();
         while(!scan_->is_end()) {
             rid_ = scan_->rid();
             auto record = fh_->get_record(rid_, context_);
             bool flag = false;
-            std::cout << "fed_conds_.size(): " << fed_conds_.size() << std::endl;
             if (fed_conds_.size() == 0) {
                 flag = true;
             } else {
@@ -169,13 +164,13 @@ class SeqScanExecutor : public AbstractExecutor {
                         rhs_data = record->data + rhs_col_meta->offset;
                         rhs_type = rhs_col_meta->type;
                     }
-                    if (lhs_col_meta->type == TYPE_INT) {
-                        printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
-                    } else if (lhs_col_meta->type == TYPE_FLOAT) {
-                        printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);printf("TYPE: lhs_data: %f\n", *(float*)(record->data + lhs_col_meta->offset));
-                    } else if (lhs_col_meta->type == TYPE_STRING) {
-                        printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
-                    }
+                    // if (lhs_col_meta->type == TYPE_INT) {
+                    //     printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
+                    // } else if (lhs_col_meta->type == TYPE_FLOAT) {
+                    //     printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);printf("TYPE: lhs_data: %f\n", *(float*)(record->data + lhs_col_meta->offset));
+                    // } else if (lhs_col_meta->type == TYPE_STRING) {
+                    //     printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
+                    // }
                     int cmp = ix_compare(lhs_data, rhs_data, rhs_type, lhs_col_meta->len);
                     if (cond.op == OP_EQ) {
                         if (cmp == 0) {
@@ -229,9 +224,6 @@ class SeqScanExecutor : public AbstractExecutor {
             }
             scan_->next();
         }
-        if (scan_->is_end()) {
-            std::cout << "In SeqScanExecutor::nextTuple(), scan_->is_end()" << std::endl;
-        }
     }
 
     /**
@@ -240,7 +232,6 @@ class SeqScanExecutor : public AbstractExecutor {
      * @return std::unique_ptr<RmRecord>
      */
     std::unique_ptr<RmRecord> Next() override {
-        std::cout << "In seq scan Next()" << std::endl;
         return fh_->get_record(rid_, context_);
     }
     size_t tupleLen() const override { return len_; }

@@ -35,11 +35,14 @@ class InsertExecutor : public AbstractExecutor {
         }
         fh_ = sm_manager_->fhs_.at(tab_name).get();
         context_ = context;
+        if (context) {
+            context_->lock_mgr_->lock_IX_on_table(context->txn_, fh_->GetFd());
+        }
     };
 
     std::unique_ptr<RmRecord> Next() override {
         // Make record buffer
-        RmRecord rec(fh_->get_file_hdr().record_size);
+        RmRecord record(fh_->get_file_hdr().record_size);
         for (size_t i = 0; i < values_.size(); i++) {
             auto &col = tab_.cols[i];
             auto &val = values_[i];
@@ -49,11 +52,10 @@ class InsertExecutor : public AbstractExecutor {
             val.init_raw(col.len);
             // printf("InsertExecutor: %s\n", val.str_val.c_str());
             // printf("offset: %d, len: %d\n", col.offset, col.len);
-            memcpy(rec.data + col.offset, val.raw->data, col.len);
+            memcpy(record.data + col.offset, val.raw->data, col.len);
         }
         // Insert into record file
-        rid_ = fh_->insert_record(rec.data, context_);
-        
+        rid_ = fh_->insert_record(record.data, context_);
         // Insert into index
         for(size_t i = 0; i < tab_.indexes.size(); ++i) {
             auto& index = tab_.indexes[i];
@@ -61,11 +63,13 @@ class InsertExecutor : public AbstractExecutor {
             char* key = new char[index.col_tot_len];
             int offset = 0;
             for(size_t i = 0; i < index.col_num; ++i) {
-                memcpy(key + offset, rec.data + index.cols[i].offset, index.cols[i].len);
+                memcpy(key + offset, record.data + index.cols[i].offset, index.cols[i].len);
                 offset += index.cols[i].len;
             }
             ih->insert_entry(key, rid_, context_->txn_);
         }
+        auto write_record = new WriteRecord(WType::INSERT_TUPLE, tab_name_, rid_);
+        context_->txn_->append_write_record(write_record);
         return nullptr;
     }
     Rid &rid() override { return rid_; }

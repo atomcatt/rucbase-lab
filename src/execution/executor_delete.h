@@ -34,12 +34,12 @@ class DeleteExecutor : public AbstractExecutor {
         conds_ = conds;
         rids_ = rids;
         context_ = context;
+        context_->lock_mgr_->lock_IX_on_table(context->txn_, fh_->GetFd());
     }
 
     std::unique_ptr<RmRecord> Next() override {
         for (auto &rid : rids_) {
             auto record = fh_->get_record(rid, context_);
-            fh_->delete_record(rid, context_);
             // 删除索引
             for (size_t i = 0; i < tab_.indexes.size(); ++i) {
                 auto &index = tab_.indexes[i];
@@ -53,8 +53,10 @@ class DeleteExecutor : public AbstractExecutor {
                     offset += col.len;
                 }
                 ih->delete_entry(key, context_->txn_);
-                delete[] key;
             }
+            fh_->delete_record(rid, context_);
+            auto write_record = new WriteRecord(WType::DELETE_TUPLE, tab_name_, rid, *record);
+            context_->txn_->append_write_record(write_record);
         }
         return nullptr;
     }

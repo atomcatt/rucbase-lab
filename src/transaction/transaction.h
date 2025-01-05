@@ -60,6 +60,8 @@ class Transaction {
     inline std::shared_ptr<std::deque<Page*>> get_index_latch_page_set() { return index_latch_page_set_; }
     inline void append_index_latch_page_set(Page* page) { index_latch_page_set_->push_back(page); }
 
+    void append_lock_set(LockDataId lock_data_id) { lock_set_->emplace(lock_data_id); }
+
     inline std::shared_ptr<std::unordered_set<LockDataId>> get_lock_set() { return lock_set_; }
 
    private:

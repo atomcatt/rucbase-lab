@@ -52,7 +52,6 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
         }
         right_->beginTuple();
         while(!left_->is_end()) {
-            std::cout << "fed_conds_.size: " << fed_conds_.size() << std::endl;
             if (fed_conds_.empty()) {
                 break;
             }
@@ -78,13 +77,13 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
                     rhs_data = right_record->data + rhs_col_meta->offset - left_->tupleLen();
                     rhs_type = rhs_col_meta->type;
                 }
-                if (lhs_col_meta->type == TYPE_INT) {
-                    printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
-                } else if (lhs_col_meta->type == TYPE_FLOAT) {
-                    printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);
-                } else if (lhs_col_meta->type == TYPE_STRING) {
-                    printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
-                }
+                // if (lhs_col_meta->type == TYPE_INT) {
+                //     printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
+                // } else if (lhs_col_meta->type == TYPE_FLOAT) {
+                //     printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);
+                // } else if (lhs_col_meta->type == TYPE_STRING) {
+                //     printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
+                // }
                 int cmp = ix_compare(lhs_data, rhs_data, rhs_type, lhs_col_meta->len);
                 if (fed_cond.op == OP_EQ) {
                     if (cmp == 0) {
@@ -170,13 +169,13 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
                     rhs_data = right_record->data + rhs_col_meta->offset - left_->tupleLen();
                     rhs_type = rhs_col_meta->type;
                 }
-                if (lhs_col_meta->type == TYPE_INT) {
-                    printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
-                } else if (lhs_col_meta->type == TYPE_FLOAT) {
-                    printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);
-                } else if (lhs_col_meta->type == TYPE_STRING) {
-                    printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
-                }
+                // if (lhs_col_meta->type == TYPE_INT) {
+                //     printf("TYPE: INT lhs_data: %d, rhs_data: %d, len: %d\n", *(int*)(lhs_data), *(int*)rhs_data, lhs_col_meta->len);
+                // } else if (lhs_col_meta->type == TYPE_FLOAT) {
+                //     printf("TYPE: INT lhs_data: %f, rhs_data: %f, len: %d\n", *(float*)(lhs_data), *(float*)rhs_data, lhs_col_meta->len);
+                // } else if (lhs_col_meta->type == TYPE_STRING) {
+                //     printf("TYPE: STRING lhs_data: %s, rhs_data: %s, len: %d\n", lhs_data, rhs_data, lhs_col_meta->len);
+                // }
                 int cmp = ix_compare(lhs_data, rhs_data, rhs_type, lhs_col_meta->len);
                 if (fed_cond.op == OP_EQ) {
                     if (cmp == 0) {
