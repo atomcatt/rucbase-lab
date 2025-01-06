@@ -34,7 +34,9 @@ class DeleteExecutor : public AbstractExecutor {
         conds_ = conds;
         rids_ = rids;
         context_ = context;
-        context_->lock_mgr_->lock_IX_on_table(context->txn_, fh_->GetFd());
+        if (context) {
+            context_->lock_mgr_->lock_IX_on_table(context->txn_, fh_->GetFd());
+        }
     }
 
     std::unique_ptr<RmRecord> Next() override {

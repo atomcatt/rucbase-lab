@@ -56,6 +56,7 @@ public:
     ~LockManager() {}
 
     
+    bool check_unique_transaction(Transaction* txn, std::list<LockRequest> &request_queue);
 
     void check_lock_conflict(Transaction* txn, GroupLockMode group_lock_mode, LockMode lock_mode);
 

@@ -18,9 +18,9 @@ def get_output_name(test_case):
 def build():
     # root
     os.chdir("../../../")
-    # if os.path.exists("./build"):
-    #     os.system("rm -rf build")
-    # os.mkdir("./build")
+    if os.path.exists("./build"):
+        os.system("rm -rf build")
+    os.mkdir("./build")
     os.chdir("./build")
     os.system("cmake ..")
     os.system("make rmdb -j4")
@@ -37,8 +37,8 @@ def run():
         test_file = get_test_name(test_case)
         database_name = "transaction_test_db"
 
-        # if os.path.exists(database_name):
-        #     os.system("rm -rf " + database_name)
+        if os.path.exists(database_name):
+            os.system("rm -rf " + database_name)
 
         os.system("./bin/rmdb " + database_name + " &")
         # ./bin/transaction_test ../src/test/transaction_test/commit_test.sql
