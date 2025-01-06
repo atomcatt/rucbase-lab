@@ -118,7 +118,7 @@ void TransactionManager::abort(Transaction * txn, LogManager *log_manager) {
                 index_handle->insert_entry(key, rid, context->txn_);
             }
         } else if (wtype == WType::UPDATE_TUPLE) {
-            // 删除旧的索引
+            // 删除旧的索引并重建新的索引
             for (auto &index : table.indexes) {
                 auto index_handle = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name, index.cols)).get();
                 char *key = new char[index.col_tot_len];
@@ -128,20 +128,10 @@ void TransactionManager::abort(Transaction * txn, LogManager *log_manager) {
                     offset += col.len;
                 }
                 index_handle->delete_entry(key, context->txn_);
+                index_handle->insert_entry(key, rid, context->txn_);
             }
             // 更新记录
             file_handle->update_record(rid, record.data, context);
-            // 重建索引
-            for (auto &index : table.indexes) {
-                auto index_handle = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name, index.cols)).get();
-                char *key = new char[index.col_tot_len];
-                int offset = 0;
-                for (auto &col : index.cols) {
-                    memcpy(key + offset, record.data + col.offset, col.len);
-                    offset += col.len;
-                }
-                index_handle->insert_entry(key, rid, context->txn_);
-            }
         }
     }
     auto lock_set = txn->get_lock_set();
