@@ -81,6 +81,7 @@ bool LockManager::lock_shared_on_record(Transaction* txn, const Rid& rid, int ta
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, rid, LockDataType::RECORD);
     auto &lock_request_queue = lock_table_.at(lock_data_id);
+    _lock_IS_on_table(txn, tab_fd);
     auto &group_lock_mode = lock_request_queue.group_lock_mode_;
     auto &request_queue = lock_request_queue.request_queue_;
     // 加锁队列的锁模式为IX、X、SIX时，事务无法申请共享锁，直接回滚
@@ -114,6 +115,7 @@ bool LockManager::lock_exclusive_on_record(Transaction* txn, const Rid& rid, int
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, rid, LockDataType::RECORD);
     auto &lock_request_queue = lock_table_[lock_data_id];
+    _lock_IX_on_table(txn, tab_fd);
     auto &group_lock_mode = lock_request_queue.group_lock_mode_;
     auto &request_queue = lock_request_queue.request_queue_;
     for (auto &lock_request : request_queue) {
@@ -265,6 +267,30 @@ bool LockManager::lock_IS_on_table(Transaction* txn, int tab_fd) {
     return true;
 }
 
+bool LockManager::_lock_IS_on_table(Transaction* txn, int tab_fd) {
+    ensure_txn_can_lock(txn);
+    auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
+    auto &lock_request_queue = lock_table_[lock_data_id];
+    auto &group_lock_mode = lock_request_queue.group_lock_mode_;
+    auto &request_queue = lock_request_queue.request_queue_;
+    for (auto &lock_request : request_queue) {
+        // IS锁是表上最弱的锁，如果队列中已经存在了这个事务申请的锁，那么锁等级一定大于等于IS
+        if (lock_request.txn_id_ == txn->get_transaction_id()) {
+            return true;
+        }
+    }
+    check_lock_conflict(txn, group_lock_mode, LockMode::INTENTION_SHARED);
+    if (group_lock_mode == GroupLockMode::NON_LOCK) {
+        group_lock_mode = GroupLockMode::IS;
+    }
+    LockRequest lock_request(txn->get_transaction_id(), LockMode::INTENTION_SHARED);
+    lock_request.granted_ = true;
+    request_queue.emplace_back(lock_request);
+    lock_request_queue.lock_mode_count_["IS"]++;
+    txn->append_lock_set(lock_data_id);
+    return true;
+}
+
 /**
  * @description: 申请表级意向写锁
  * @return {bool} 返回加锁是否成功
@@ -273,6 +299,52 @@ bool LockManager::lock_IS_on_table(Transaction* txn, int tab_fd) {
  */
 bool LockManager::lock_IX_on_table(Transaction* txn, int tab_fd) {
     std::unique_lock<std::mutex> lock(latch_);
+    ensure_txn_can_lock(txn);
+    auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
+    auto &lock_request_queue = lock_table_[lock_data_id];
+    auto &group_lock_mode = lock_request_queue.group_lock_mode_;
+    auto &request_queue = lock_request_queue.request_queue_;
+    for (auto &lock_request : request_queue) {
+        if (lock_request.txn_id_ == txn->get_transaction_id()) {
+            // 不需要锁升级
+            if (lock_request.lock_mode_ == LockMode::INTENTION_EXCLUSIVE ||
+                lock_request.lock_mode_ == LockMode::S_IX ||
+                lock_request.lock_mode_ == LockMode::EXCLUSIVE) {
+                    return true;
+            }
+            // S锁升级为IX锁 要考虑相容矩阵
+            if (lock_request.lock_mode_ == LockMode::SHARED && 
+                lock_request_queue.lock_mode_count_["S"] == 1) {
+                lock_request.lock_mode_ = LockMode::S_IX;
+                lock_request_queue.lock_mode_count_["S"]--;
+                lock_request_queue.lock_mode_count_["IX"]++;
+                group_lock_mode = GroupLockMode::SIX;
+                return true;
+            }
+            // IS锁升级为IX锁 要考虑相容矩阵
+            if (lock_request.lock_mode_ == LockMode::INTENTION_SHARED && 
+                lock_request_queue.lock_mode_count_["S"] == 0 &&
+                lock_request_queue.lock_mode_count_["SIX"] == 0) {
+                lock_request.lock_mode_ = LockMode::INTENTION_EXCLUSIVE;
+                lock_request_queue.lock_mode_count_["IS"]--;
+                lock_request_queue.lock_mode_count_["IX"]++;
+                group_lock_mode = GroupLockMode::IX;
+                return true;
+            }
+            throw TransactionAbortException(txn->get_transaction_id(), AbortReason::DEADLOCK_PREVENTION);
+        }
+    }
+    check_lock_conflict(txn, group_lock_mode, LockMode::INTENTION_EXCLUSIVE);
+    group_lock_mode = GroupLockMode::IX;
+    LockRequest lock_request(txn->get_transaction_id(), LockMode::INTENTION_EXCLUSIVE);
+    lock_request.granted_ = true;
+    request_queue.emplace_back(lock_request);
+    lock_request_queue.lock_mode_count_["IX"]++;
+    txn->append_lock_set(lock_data_id);
+    return true;
+}
+
+bool LockManager::_lock_IX_on_table(Transaction* txn, int tab_fd) {
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
     auto &lock_request_queue = lock_table_[lock_data_id];

@@ -51,12 +51,6 @@ void TransactionManager::commit(Transaction* txn, LogManager* log_manager) {
     std::scoped_lock<std::mutex> lock(latch_);
     auto write_set = txn->get_write_set();
     auto lock_set = txn->get_lock_set();
-    if (!write_set->empty()) {
-        for (auto &write_record : *write_set) {
-            delete write_record;
-        }
-        write_set->clear();
-    }
     if (!lock_set->empty()) {
         for (auto &lock_id : *lock_set) {
             lock_manager_->unlock(txn, lock_id);
@@ -118,7 +112,7 @@ void TransactionManager::abort(Transaction * txn, LogManager *log_manager) {
                 index_handle->insert_entry(key, rid, context->txn_);
             }
         } else if (wtype == WType::UPDATE_TUPLE) {
-            // 删除旧的索引并重建新的索引
+            // 删除新的索引并重建旧的索引
             for (auto &index : table.indexes) {
                 auto index_handle = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name, index.cols)).get();
                 char *key = new char[index.col_tot_len];
