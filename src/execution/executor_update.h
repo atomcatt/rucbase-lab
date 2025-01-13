@@ -70,7 +70,7 @@ class UpdateExecutor : public AbstractExecutor {
                 // 删除旧的索引
                 ih->delete_entry(key, context_->txn_);
                 // 插入新的索引
-                // ih->insert_entry(key, rid, context_->txn_);
+                ih->insert_entry(key, rid, context_->txn_);
             }
             fh_->update_record(rid, record->data, context_);
         }

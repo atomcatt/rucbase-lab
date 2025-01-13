@@ -77,6 +77,9 @@ void LockManager::check_lock_conflict(Transaction *txn, GroupLockMode group_lock
  * @param {int} tab_fd
  */
 bool LockManager::lock_shared_on_record(Transaction* txn, const Rid& rid, int tab_fd) {
+    if (txn == nullptr) {
+        return true;
+    }
     std::unique_lock<std::mutex> lock(latch_);
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, rid, LockDataType::RECORD);
@@ -111,6 +114,9 @@ bool LockManager::lock_shared_on_record(Transaction* txn, const Rid& rid, int ta
  * @param {int} tab_fd 记录所在的表的fd
  */
 bool LockManager::lock_exclusive_on_record(Transaction* txn, const Rid& rid, int tab_fd) {
+    if (txn == nullptr) {
+        return true;
+    }
     std::unique_lock<std::mutex> lock(latch_);
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, rid, LockDataType::RECORD);
@@ -150,6 +156,9 @@ bool LockManager::lock_exclusive_on_record(Transaction* txn, const Rid& rid, int
  * @param {int} tab_fd 目标表的fd
  */
 bool LockManager::lock_shared_on_table(Transaction* txn, int tab_fd) {
+    if (txn == nullptr) {
+        return true;
+    }
     std::unique_lock<std::mutex> lock(latch_);
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
@@ -204,6 +213,9 @@ bool LockManager::lock_shared_on_table(Transaction* txn, int tab_fd) {
  * @param {int} tab_fd 目标表的fd
  */
 bool LockManager::lock_exclusive_on_table(Transaction* txn, int tab_fd) {
+    if (txn == nullptr) {
+        return true;
+    }
     std::unique_lock<std::mutex> lock(latch_);
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
@@ -243,6 +255,9 @@ bool LockManager::lock_exclusive_on_table(Transaction* txn, int tab_fd) {
  * @param {int} tab_fd 目标表的fd
  */
 bool LockManager::lock_IS_on_table(Transaction* txn, int tab_fd) {
+    if (txn == nullptr) {
+        return true;
+    }
     std::unique_lock<std::mutex> lock(latch_);
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
@@ -268,6 +283,9 @@ bool LockManager::lock_IS_on_table(Transaction* txn, int tab_fd) {
 }
 
 bool LockManager::_lock_IS_on_table(Transaction* txn, int tab_fd) {
+    if (txn == nullptr) {
+        return true;
+    }
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
     auto &lock_request_queue = lock_table_[lock_data_id];
@@ -298,6 +316,9 @@ bool LockManager::_lock_IS_on_table(Transaction* txn, int tab_fd) {
  * @param {int} tab_fd 目标表的fd
  */
 bool LockManager::lock_IX_on_table(Transaction* txn, int tab_fd) {
+    if (txn == nullptr) {
+        return true;
+    }
     std::unique_lock<std::mutex> lock(latch_);
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
@@ -345,6 +366,9 @@ bool LockManager::lock_IX_on_table(Transaction* txn, int tab_fd) {
 }
 
 bool LockManager::_lock_IX_on_table(Transaction* txn, int tab_fd) {
+    if (txn == nullptr) {
+        return true;
+    }
     ensure_txn_can_lock(txn);
     auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
     auto &lock_request_queue = lock_table_[lock_data_id];
@@ -397,6 +421,9 @@ bool LockManager::_lock_IX_on_table(Transaction* txn, int tab_fd) {
  * @param {LockDataId} lock_data_id 要释放的锁ID
  */
 bool LockManager::unlock(Transaction* txn, LockDataId lock_data_id) {
+    if (txn == nullptr) {
+        return true;
+    }
     // 解锁逻辑
     std::unique_lock<std::mutex> lock(latch_);
 
