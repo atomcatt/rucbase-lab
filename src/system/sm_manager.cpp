@@ -249,9 +249,13 @@ void SmManager::drop_table(const std::string& tab_name, Context* context) {
  * @param {Context*} context
  */
 void SmManager::create_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context) {
-    if (context) {
-        // context->lock_mgr_->lock_shared_on_table(context->txn_, fhs_[tab_name]->GetFd());
+    if (!db_.is_table(tab_name)) {
+        throw TableNotFoundError(tab_name);
     }
+    if (context) {
+        context->lock_mgr_->lock_shared_on_table(context->txn_, fhs_[tab_name]->GetFd());
+    }
+    std::cout << __LINE__ << std::endl;
     // 获取表的Meta data
     TabMeta& tab = db_.get_table(tab_name);
     // 建索引的Meta data
